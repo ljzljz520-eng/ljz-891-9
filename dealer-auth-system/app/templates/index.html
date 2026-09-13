@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="query-hero">
+  <h1>经销商授权资质查询</h1>
+  <p class="subtitle">请输入经销商名称与门店编号，核验其品牌授权、区域及有效期等信息</p>
+
+  <form class="query-card" method="post" action="{{ url_for('public.query') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="dealer_name">经销商名称</label>
+      <input type="text" id="dealer_name" name="dealer_name" required
+             maxlength="128" autocomplete="organization"
+             placeholder="请与授权书上的名称完全一致">
+    </div>
+    <div class="field">
+      <label for="store_code">门店编号</label>
+      <input type="text" id="store_code" name="store_code" required
+             maxlength="64" autocomplete="off" placeholder="例如：SH-0001">
+    </div>
+    <button type="submit" class="btn-primary btn-block">立即核验</button>
+  </form>
+
+  <ul class="tips">
+    <li>名称与门店编号需同时匹配，缺一不可；</li>
+    <li>授权状态以授权有效期实时计算；</li>
+    <li>如信息与实际不符，请联系页面底部客服。</li>
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ '编辑资质' if mode == 'edit' else '新增资质' }}{% endblock %}
+{% block page_title %}{{ '编辑资质' if mode == 'edit' else '新增资质' }}{% endblock %}
+{% block body %}
+<div class="panel" style="max-width:760px">
+  <div class="panel-body">
+    <form method="post" class="form"
+          action="{{ url_for('admin.dealer_edit', dealer_id=dealer_id) if mode == 'edit' else url_for('admin.dealer_new') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-grid">
+        <div class="form-row">
+          <label>经销商名称 <i>*</i></label>
+          <input class="input" name="dealer_name" required maxlength="128"
+                 value="{{ d.dealer_name if d.dealer_name is defined else '' }}">
+        </div>
+        <div class="form-row">
+          <label>门店编号 <i>*</i></label>
+          <input class="input" name="store_code" required maxlength="64"
+                 value="{{ d.store_code if d.store_code is defined else '' }}">
+        </div>
+        <div class="form-row form-row-wide">
+          <label>授权品牌 <i>*</i></label>
+          <input class="input" name="brands" required placeholder="多个品牌用 | 分隔，如：品牌A|品牌B"
+                 value="{{ d.brands if d.brands is defined else '' }}">
+        </div>
+        <div class="form-row">
+          <label>授权区域</label>
+          <input class="input" name="region" maxlength="128"
+                 value="{{ d.region if d.region is defined else '' }}">
+        </div>
+        <div class="form-row">
+          <label>上级代理</label>
+          <input class="input" name="parent_agent" maxlength="128"
+                 value="{{ d.parent_agent if d.parent_agent is defined else '' }}">
+        </div>
+        <div class="form-row">
+          <label>有效期起</label>
+          <input class="input" type="date" name="valid_from"
+                 value="{{ d.valid_from.strftime('%Y-%m-%d') if d.valid_from else '' }}">
+        </div>
+        <div class="form-row">
+          <label>有效期止</label>
+          <input class="input" type="date" name="valid_until"
+                 value="{{ d.valid_until.strftime('%Y-%m-%d') if d.valid_until else '' }}">
+        </div>
+        <div class="form-row">
+          <label>开通时间</label>
+          <input class="input" type="date" name="opened_at"
+                 value="{{ d.opened_at.strftime('%Y-%m-%d') if d.opened_at else '' }}">
+        </div>
+        <div class="form-row form-row-wide">
+          <label>备注</label>
+          <input class="input" name="remark" maxlength="255"
+                 value="{{ d.remark if d.remark is defined else '' }}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" type="submit">保存</button>
+        <a class="btn-ghost" href="{{ url_for('admin.dealer_list') }}">取消</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

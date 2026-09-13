@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}管理后台{% endblock %} · {{ SITE_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-mark-sm">盾</span>
+      <div>
+        <div class="sb-title">资质管理后台</div>
+        <div class="sb-sub">{{ SITE_NAME }}</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-item {{ 'active' if request.endpoint == 'admin.dashboard' }}">📊 概览</a>
+      <a href="{{ url_for('admin.dealer_list') }}" class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('admin.dealer') and not request.endpoint.endswith('import') }}">🏪 经销商资质</a>
+      <a href="{{ url_for('admin.dealer_import') }}" class="nav-item {{ 'active' if request.endpoint == 'admin.dealer_import' }}">📥 CSV 导入</a>
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('admin.admin_list') }}" class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('admin.admin') }}">👥 管理员账号</a>
+      {% endif %}
+      <a href="{{ url_for('admin.logs') }}" class="nav-item {{ 'active' if request.endpoint == 'admin.logs' }}">📜 操作日志</a>
+    </nav>
+    <div class="sidebar-foot">
+      <a href="{{ url_for('public.index') }}" target="_blank" class="nav-item">🔍 打开查询页</a>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div class="page-title">{% block page_title %}概览{% endblock %}</div>
+      <div class="userbox">
+        <span class="user-name">{{ current_user.display_name or current_user.username }}</span>
+        <span class="role-chip">{{ current_user.role_label }}</span>
+        <a class="toplink" href="{{ url_for('admin.profile') }}">个人资料</a>
+        <form method="post" action="{{ url_for('admin.logout') }}" class="inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="linklike" type="submit">退出</button>
+        </form>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, msg in messages %}
+            <div class="flash flash-{{ category }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="page-body">
+      {% block body %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

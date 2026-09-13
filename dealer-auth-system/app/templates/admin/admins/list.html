@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+{% block title %}管理员账号{% endblock %}
+{% block page_title %}管理员账号{% endblock %}
+{% block body %}
+<div class="toolbar">
+  <div></div>
+  <div class="toolbar-actions"><a class="btn-primary" href="{{ url_for('admin.admin_new') }}">+ 新增管理员</a></div>
+</div>
+<div class="panel">
+<table class="table">
+  <thead><tr><th>ID</th><th>用户名</th><th>显示名称</th><th>邮箱</th><th>角色</th><th>状态</th>
+    <th>创建时间</th><th>最近登录</th><th>操作</th></tr></thead>
+  <tbody>
+  {% for a in items %}
+  <tr>
+    <td>{{ a.id }}</td>
+    <td>{{ a.username }}{% if a.id == current_user.id %} <span class="me-tag">我</span>{% endif %}</td>
+    <td>{{ a.display_name or '—' }}</td>
+    <td>{{ a.email or '—' }}</td>
+    <td><span class="role-chip {{ 'role-admin' if a.is_admin }}">{{ a.role_label }}</span></td>
+    <td>
+      {% if a.active %}<span class="dot dot-green"></span>启用{% else %}<span class="dot dot-gray"></span>停用{% endif %}
+    </td>
+    <td class="cell-nowrap">{{ a.created_at.strftime('%Y-%m-%d') }}</td>
+    <td class="cell-nowrap">{{ a.last_login_at.strftime('%Y-%m-%d %H:%M') if a.last_login_at else '—' }}</td>
+    <td class="cell-nowrap">
+      <a class="table-btn" href="{{ url_for('admin.admin_edit', admin_id=a.id) }}">编辑</a>
+      {% if a.id != current_user.id %}
+      <form method="post" action="{{ url_for('admin.admin_delete', admin_id=a.id) }}" class="inline"
+            onsubmit="return confirm('确认删除账号 {{ a.username }}？')">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="table-btn danger" type="submit">删除</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="hint">超级管理员可管理账号与资质；运营管理员只能维护经销商资质。</p>
+{% endblock %}

@@ -1,0 +1,28 @@
+# /etc/nginx/conf.d/dealer-auth.conf
+# HTTP -> HTTPS
+server {
+    listen 80;
+    server_name dealer-auth.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name dealer-auth.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/dealer-auth.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dealer-auth.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # 上传 CSV 需要足够的请求体（应用侧限制 5MB，这里放宽到 8MB）
+    client_max_body_size 8m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+}

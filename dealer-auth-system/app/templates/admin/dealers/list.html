@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block title %}经销商资质{% endblock %}
+{% block page_title %}经销商资质{% endblock %}
+{% block body %}
+<div class="toolbar">
+  <form class="toolbar-search" method="get">
+    <input class="input" name="q" value="{{ q }}" placeholder="搜索名称 / 门店编号 / 品牌 / 区域">
+    <select class="input select-sm" name="status">
+      <option value="">全部状态</option>
+      <option value="valid" {{ 'selected' if status == 'valid' }}>授权有效</option>
+      <option value="expired" {{ 'selected' if status == 'expired' }}>已过期</option>
+    </select>
+    <button class="btn-ghost" type="submit">搜索</button>
+  </form>
+  <div class="toolbar-actions">
+    <a class="btn-ghost" href="{{ url_for('admin.dealer_import') }}">📥 CSV 导入</a>
+    <a class="btn-primary" href="{{ url_for('admin.dealer_new') }}">+ 新增资质</a>
+  </div>
+</div>
+
+<div class="panel">
+<table class="table">
+  <thead><tr>
+    <th>经销商名称</th><th>门店编号</th><th>授权品牌</th><th>授权区域</th>
+    <th>有效期</th><th>上级代理</th><th>开通时间</th><th>状态</th><th>操作</th>
+  </tr></thead>
+  <tbody>
+  {% for d in pagination.items %}
+  <tr>
+    <td class="cell-name">{{ d.dealer_name }}</td>
+    <td>{{ d.store_code }}</td>
+    <td class="ellipsis" title="{{ d.brands_display }}">{{ d.brands_display }}</td>
+    <td>{{ d.region }}</td>
+    <td class="cell-nowrap">{{ d.valid_from|datefmt }}<br>~ {{ d.valid_until|datefmt }}</td>
+    <td>{{ d.parent_agent }}</td>
+    <td>{{ d.opened_at|datefmt }}</td>
+    <td><span class="status-badge status-{{ d.status }}">{{ d.status_label }}</span></td>
+    <td class="cell-nowrap">
+      <a class="table-btn" href="{{ url_for('admin.dealer_edit', dealer_id=d.id) }}">编辑</a>
+      <form method="post" action="{{ url_for('admin.dealer_delete', dealer_id=d.id) }}"
+            class="inline" onsubmit="return confirm('确认删除 {{ d.dealer_name }}（{{ d.store_code }}）？')">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="table-btn danger" type="submit">删除</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="empty">没有匹配的记录</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% set base_args = {'q': q, 'status': status} %}
+{% include "admin/_pagination.html" %}
+{% endblock %}

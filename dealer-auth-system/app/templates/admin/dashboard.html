@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block title %}概览{% endblock %}
+{% block page_title %}数据概览{% endblock %}
+{% block body %}
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">资质记录总数</div></div>
+  <div class="stat-card stat-green"><div class="stat-num">{{ stats.valid }}</div><div class="stat-label">授权有效</div></div>
+  <div class="stat-card stat-red"><div class="stat-num">{{ stats.expired }}</div><div class="stat-label">已过期</div></div>
+  <div class="stat-card stat-blue"><div class="stat-num">{{ stats.admins }}</div><div class="stat-label">管理员账号</div></div>
+</div>
+
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-head"><h3>最近更新的资质</h3>
+      <a class="btn-small" href="{{ url_for('admin.dealer_new') }}">+ 新增资质</a></div>
+    <table class="table">
+      <thead><tr><th>经销商</th><th>门店编号</th><th>品牌</th><th>有效期至</th><th>状态</th></tr></thead>
+      <tbody>
+      {% for d in recent %}
+        <tr>
+          <td>{{ d.dealer_name }}</td>
+          <td>{{ d.store_code }}</td>
+          <td class="ellipsis">{{ d.brands_display }}</td>
+          <td>{{ d.valid_until|datefmt }}</td>
+          <td><span class="status-badge status-{{ d.status }}">{{ d.status_label }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">暂无数据，去 <a href="{{ url_for('admin.dealer_import') }}">CSV 导入</a> 或手动新增吧。</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>最新操作日志</h3>
+      <a class="btn-small" href="{{ url_for('admin.logs') }}">查看全部</a></div>
+    <ul class="log-mini">
+      {% for log in logs %}
+      <li>
+        <span class="log-time">{{ log.created_at.strftime('%m-%d %H:%M') }}</span>
+        <span class="log-user">{{ log.admin_name }}</span>
+        <span class="log-action">{{ log.action }}</span>
+        <span class="log-target">{{ log.target }}</span>
+      </li>
+      {% else %}<li class="empty">暂无日志</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

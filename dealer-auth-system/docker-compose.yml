@@ -1,0 +1,51 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-dealer_auth}
+      MYSQL_USER: ${MYSQL_USER:-dealer}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change-me-db-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me-root-password}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-change-me-root-password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      FLASK_ENV: production
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-dealer}:${MYSQL_PASSWORD:-change-me-db-password}@db:3306/${MYSQL_DATABASE:-dealer_auth}?charset=utf8mb4
+      DB_POOL_RECYCLE: "280"
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_USE_SSL: ${MAIL_USE_SSL:-true}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_BASE_URL: ${MAIL_BASE_URL}
+      SITE_NAME: ${SITE_NAME:-品牌经销资质查询系统}
+      COMPANY_NAME: ${COMPANY_NAME}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+      SUPPORT_PHONE: ${SUPPORT_PHONE}
+      QUERY_RATE_LIMIT: ${QUERY_RATE_LIMIT:-20}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+    ports:
+      - "127.0.0.1:8000:8000"
+    # 首次启动后执行一次建表（建表命令幂等，可保留；创建管理员见 README）
+    command: >
+      sh -c "python -m flask --app wsgi:app init-db &&
+             gunicorn -w 4 -b 0.0.0.0:8000 --timeout 30 wsgi:app"
+
+volumes:
+  mysql_data:

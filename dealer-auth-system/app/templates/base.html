@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="{{ url_for('public.index') }}">
+      <span class="brand-mark">盾</span>
+      <span>{{ SITE_NAME }}</span>
+    </a>
+    <a class="admin-entry" href="{{ url_for('admin.login') }}">管理登录</a>
+  </div>
+</header>
+
+<main class="container main-area">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack">
+        {% for category, msg in messages %}
+          <div class="flash flash-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    {% if COMPANY_NAME %}<div>{{ COMPANY_NAME }}</div>{% endif %}
+    <div class="footer-meta">
+      {% if SUPPORT_EMAIL %}客服邮箱：{{ SUPPORT_EMAIL }}{% endif %}
+      {% if SUPPORT_PHONE %}　服务热线：{{ SUPPORT_PHONE }}{% endif %}
+    </div>
+    <div class="copyright">© {{ current_year }} {{ SITE_NAME }}　本结果仅供资质核验参考</div>
+  </div>
+</footer>
+</body>
+</html>

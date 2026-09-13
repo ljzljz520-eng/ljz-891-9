@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+{% block title %}CSV 导入{% endblock %}
+{% block page_title %}CSV 批量导入资质{% endblock %}
+{% block body %}
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-head"><h3>上传文件</h3></div>
+    <div class="panel-body">
+      <form method="post" enctype="multipart/form-data" class="form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+          <label>CSV 文件（≤ 5MB，UTF-8 / GBK 编码）</label>
+          <input class="input" type="file" name="csv_file" accept=".csv" required>
+        </div>
+        <label class="remember">
+          <input type="checkbox" name="update_existing"> 门店编号已存在时更新该记录（默认跳过）
+        </label>
+        <div class="form-actions">
+          <button class="btn-primary" type="submit">开始导入</button>
+          <a class="btn-ghost" href="{{ url_for('admin.dealer_template') }}">⬇ 下载 CSV 模板</a>
+        </div>
+      </form>
+      <hr class="divider">
+      <h4>表头说明（顺序不限，名称需一致；* 为必填）</h4>
+      <div class="table-wrap">
+      <table class="table table-compact">
+        <thead><tr><th>列名</th><th>必填</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>经销商名称</td><td>*</td><td>与授权书一致，最长 128 字</td></tr>
+          <tr><td>门店编号</td><td>*</td><td>全局唯一，重复时按上方选项跳过或更新</td></tr>
+          <tr><td>授权品牌</td><td>*</td><td>多品牌用 <code>|</code> 分隔（也兼容 、 ; , / ）</td></tr>
+          <tr><td>授权区域</td><td></td><td>如：上海市 / 华东大区</td></tr>
+          <tr><td>有效期起 / 有效期止</td><td></td><td>支持 2026-01-01、2026/1/1、2026年1月1日</td></tr>
+          <tr><td>上级代理</td><td></td><td>上一级代理商名称</td></tr>
+          <tr><td>开通时间</td><td></td><td>门店/账号开通日期</td></tr>
+          <tr><td>备注</td><td></td><td>最长 255 字</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>导入结果</h3></div>
+    <div class="panel-body">
+      {% if result %}
+      <div class="import-summary">
+        <span class="sum-chip green">新增 {{ result.created }}</span>
+        <span class="sum-chip blue">更新 {{ result.updated }}</span>
+        <span class="sum-chip gray">跳过 {{ result.skipped }}</span>
+        <span class="sum-chip {{ 'red' if result.errors else 'green' }}">问题行 {{ result.errors|length }}</span>
+      </div>
+      {% if result.errors %}
+      <div class="error-table-wrap">
+        <table class="table table-compact">
+          <thead><tr><th>CSV 行号</th><th>问题详情</th></tr></thead>
+          <tbody>
+          {% for e in result.errors %}
+            <tr><td class="cell-nowrap">{% if e.row == 0 %}表头/文件{% else %}第 {{ e.row }} 行{% endif %}</td>
+            <td>{{ e.messages|join('；') }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">提示：有问题的行不会被导入，修正后重新上传即可；其他行已正常入库。</p>
+      {% else %}
+      <p class="hint">全部数据导入成功。</p>
+      {% endif %}
+      {% else %}
+      <p class="hint">尚未导入。请先下载模板，按格式整理后上传。</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

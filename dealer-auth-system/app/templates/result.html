@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}查询结果 · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="result-wrap">
+  {% if dealer %}
+  <div class="result-card">
+    <div class="result-head">
+      <div>
+        <h1>{{ dealer.dealer_name }}</h1>
+        <div class="store-code">门店编号：{{ dealer.store_code }}</div>
+      </div>
+      <span class="status-badge status-{{ dealer.status }}">{{ dealer.status_label }}</span>
+    </div>
+
+    <dl class="cert-grid">
+      <div class="cert-item">
+        <dt>授权品牌</dt>
+        <dd>
+          {% for b in dealer.brand_list %}<span class="tag">{{ b }}</span>{% endfor %}
+        </dd>
+      </div>
+      <div class="cert-item">
+        <dt>授权区域</dt>
+        <dd>{{ dealer.region or '—' }}</dd>
+      </div>
+      <div class="cert-item">
+        <dt>授权有效期</dt>
+        <dd>{{ dealer.valid_from|datefmt }} 至 {{ dealer.valid_until|datefmt }}</dd>
+      </div>
+      <div class="cert-item">
+        <dt>上级代理</dt>
+        <dd>{{ dealer.parent_agent or '—' }}</dd>
+      </div>
+      <div class="cert-item">
+        <dt>开通时间</dt>
+        <dd>{{ dealer.opened_at|datefmt }}</dd>
+      </div>
+      {% if dealer.remark %}
+      <div class="cert-item">
+        <dt>备注</dt>
+        <dd>{{ dealer.remark }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+
+    <div class="cert-foot">
+      <span>查询时间：{{ now is defined and now or '' }}{% if not now %}<script>document.write(new Date().toLocaleString('zh-CN'))</script>{% endif %}</span>
+      <span class="cert-seal">官方核验</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="result-card not-found">
+    <div class="nf-icon">!</div>
+    <h1>未查询到匹配的资质记录</h1>
+    <p>您输入的信息：</p>
+    <p class="nf-input">经销商名称：{{ name or '（未填写）' }}　门店编号：{{ code or '（未填写）' }}</p>
+    <p class="nf-tip">请核对名称与门店编号是否与授权书完全一致（注意空格、大小写）。<br>
+       如确认无误仍无法查询，请联系客服核实。</p>
+  </div>
+  {% endif %}
+
+  <div class="result-actions">
+    <a class="btn-ghost" href="{{ url_for('public.index') }}">重新查询</a>
+  </div>
+</section>
+{% endblock %}

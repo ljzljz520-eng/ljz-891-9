@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理登录 · {{ SITE_NAME }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="auth-body">
+<div class="auth-card">
+  <div class="auth-brand"><span class="brand-mark-sm">盾</span> 资质管理后台</div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, msg in messages %}<div class="flash flash-{{ category }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  <form method="post" action="{{ url_for('admin.login') }}{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <label class="auth-label">用户名</label>
+    <input class="auth-input" type="text" name="username" required autofocus autocomplete="username">
+    <label class="auth-label">密码</label>
+    <input class="auth-input" type="password" name="password" required autocomplete="current-password">
+    <label class="remember"><input type="checkbox" name="remember"> 7 天内免登录</label>
+    <button class="btn-primary btn-block" type="submit">登 录</button>
+  </form>
+  <div class="auth-links">
+    <a href="{{ url_for('admin.forgot_password') }}">忘记密码？</a>
+    <a href="{{ url_for('public.index') }}">← 返回查询页</a>
+  </div>
+</div>
+</body>
+</html>

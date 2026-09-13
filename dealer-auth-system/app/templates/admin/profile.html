@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% block title %}个人资料{% endblock %}
+{% block page_title %}个人资料{% endblock %}
+{% block body %}
+<div class="panel" style="max-width:560px">
+  <div class="panel-body">
+    <form method="post" class="form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row"><label>用户名</label><input class="input" value="{{ current_user.username }}" disabled></div>
+      <div class="form-row"><label>角色</label><input class="input" value="{{ current_user.role_label }}" disabled></div>
+      <div class="form-row"><label>显示名称</label><input class="input" name="display_name" value="{{ current_user.display_name or '' }}"></div>
+      <div class="form-row"><label>邮箱</label><input class="input" type="email" name="email" value="{{ current_user.email or '' }}"></div>
+      <hr class="divider">
+      <p class="hint">如需修改密码请填写以下三项，留空则不修改：</p>
+      <div class="form-row"><label>当前密码</label><input class="input" type="password" name="old_password" autocomplete="current-password"></div>
+      <div class="form-row"><label>新密码</label><input class="input" type="password" name="new_password" minlength="8" autocomplete="new-password"></div>
+      <div class="form-actions"><button class="btn-primary" type="submit">保存</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% if pagination.pages > 1 %}
+<div class="pagination">
+  {% set endpoint = request.endpoint %}
+  {% if pagination.has_prev %}
+    <a href="{{ url_for(endpoint, page=pagination.prev_num, **base_args) }}">上一页</a>
+  {% else %}<span class="disabled">上一页</span>{% endif %}
+  <span class="page-info">第 {{ pagination.page }} / {{ pagination.pages }} 页（共 {{ pagination.total }} 条）</span>
+  {% if pagination.has_next %}
+    <a href="{{ url_for(endpoint, page=pagination.next_num, **base_args) }}">下一页</a>
+  {% else %}<span class="disabled">下一页</span>{% endif %}
+</div>
+{% endif %}
