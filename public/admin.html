@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - 品牌经销资质查询系统</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="admin-layout">
+      <aside class="sidebar">
+        <div class="logo">资质管理后台</div>
+        <ul class="menu">
+          <li><a :class="{active: tab==='dashboard'}" @click="switchTab('dashboard')">📊 数据概览</a></li>
+          <li><a :class="{active: tab==='dealers'}" @click="switchTab('dealers')">🏪 经销商管理</a></li>
+          <li><a :class="{active: tab==='import'}" @click="switchTab('import')">📥 CSV 导入</a></li>
+          <li><a :class="{active: tab==='logs'}" @click="switchTab('logs')">📋 查询日志</a></li>
+          <li v-if="isSuperAdmin"><a :class="{active: tab==='admins'}" @click="switchTab('admins')">👥 管理员管理</a></li>
+          <li><a :class="{active: tab==='mail'}" @click="switchTab('mail')">✉️ 邮件设置</a></li>
+        </ul>
+      </aside>
+
+      <div class="main">
+        <div class="topbar">
+          <h2>{{ tabTitle }}</h2>
+          <div class="user">
+            <span>{{ admin.username }}（{{ admin.role === 'super_admin' ? '超级管理员' : '管理员' }}）</span>
+            <button class="btn-sm btn-edit" @click="showPasswordModal = true">修改密码</button>
+            <button class="btn-sm btn-del" @click="logout">退出</button>
+          </div>
+        </div>
+
+        <div class="content">
+          <!-- 数据概览 -->
+          <div v-if="tab==='dashboard'">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;">
+              <div class="stat-card"><div class="label">经销商总数</div><div class="value">{{ stats.dealerCount || 0 }}</div></div>
+              <div class="stat-card"><div class="label">授权资质总数</div><div class="value">{{ stats.authCount || 0 }}</div></div>
+              <div class="stat-card"><div class="label">有效授权</div><div class="value">{{ stats.activeAuthCount || 0 }}</div></div>
+              <div class="stat-card"><div class="label">累计查询次数</div><div class="value">{{ stats.queryCount || 0 }}</div></div>
+              <div class="stat-card"><div class="label">命中次数</div><div class="value">{{ stats.hitCount || 0 }}</div></div>
+              <div class="stat-card" v-if="isSuperAdmin"><div class="label">管理员数量</div><div class="value">{{ stats.adminCount || 0 }}</div></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title">近 7 天查询趋势</div>
+              <div style="display:flex;align-items:flex-end;gap:12px;height:180px;padding:10px 0;">
+                <div v-for="(d,i) in stats.trend" :key="i" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
+                  <div style="font-size:12px;color:#6b7280;">{{ d.total }}</div>
+                  <div style="width:60%;background:#3b82f6;border-radius:4px 4px 0 0;min-height:4px;" :style="{height: barHeight(d.total) + 'px'}"></div>
+                  <div style="font-size:12px;color:#9ca3af;">{{ d.date }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 经销商管理 -->
+          <div v-if="tab==='dealers'">
+            <div class="panel">
+              <div class="toolbar">
+                <input v-model="dealerQuery.keyword" placeholder="搜索名称/编号/上级代理" style="width:240px;" @keyup.enter="loadDealers(1)">
+                <select v-model="dealerQuery.status" @change="loadDealers(1)">
+                  <option value="">全部状态</option>
+                  <option value="active">正常</option>
+                  <option value="suspended">暂停</option>
+                  <option value="closed">已关闭</option>
+                </select>
+                <button class="btn-sm btn-add" @click="loadDealers(1)">搜索</button>
+                <button class="btn-sm btn-add" @click="openDealerModal()">+ 新增经销商</button>
+              </div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>经销商名称</th><th>门店编号</th><th>区域</th><th>上级代理</th>
+                    <th>授权数</th><th>开通时间</th><th>状态</th><th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="d in dealers" :key="d.id">
+                    <td><strong>{{ d.name }}</strong></td>
+                    <td>{{ d.storeNo }}</td>
+                    <td>{{ d.region || '-' }}</td>
+                    <td>{{ d.parentAgent || '-' }}</td>
+                    <td>{{ d.authorizationCount }}</td>
+                    <td>{{ formatDate(d.activatedAt) }}</td>
+                    <td><span class="badge" :class="'badge-' + d.status">{{ dealerStatusText(d.status) }}</span></td>
+                    <td style="white-space:nowrap;">
+                      <button class="btn-sm btn-edit" @click="openDealerModal(d)">编辑</button>
+                      <button class="btn-sm btn-mail" @click="sendMail(d)" style="margin-left:4px;">发邮件</button>
+                      <button class="btn-sm btn-del" @click="deleteDealer(d)" style="margin-left:4px;">删除</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!dealers.length"><td colspan="8" style="text-align:center;color:#9ca3af;padding:30px;">暂无数据</td></tr>
+                </tbody>
+              </table>
+              <div class="pagination">
+                <span style="font-size:13px;color:#6b7280;">共 {{ dealerTotal }} 条</span>
+                <button :disabled="dealerPage<=1" @click="loadDealers(dealerPage-1)">上一页</button>
+                <button class="active">{{ dealerPage }}</button>
+                <button :disabled="dealerPage*dealerQuery.pageSize>=dealerTotal" @click="loadDealers(dealerPage+1)">下一页</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CSV 导入 -->
+          <div v-if="tab==='import'">
+            <div class="panel">
+              <div class="panel-title">CSV 批量导入经销商资质</div>
+              <p style="color:#6b7280;font-size:14px;margin-bottom:16px;">
+                请先下载标准 CSV 模板，按模板填写数据后上传。系统将自动匹配经销商名称与门店编号，存在则更新，不存在则新建。
+              </p>
+              <div class="toolbar">
+                <a href="/api/admin/import/template" class="btn-sm btn-edit" download>📥 下载 CSV 模板</a>
+                <label style="font-size:14px;color:#4b5563;">
+                  <input type="radio" v-model="importMode" value="upsert"> 存在即更新
+                  <input type="radio" v-model="importMode" value="insert" style="margin-left:12px;"> 仅新增
+                </label>
+              </div>
+              <div class="upload-area" @click="$refs.fileInput.click()" @dragover.prevent @drop.prevent="onDrop">
+                <div style="font-size:36px;margin-bottom:8px;">📄</div>
+                <p>点击选择 CSV 文件，或将文件拖拽到此处</p>
+                <p style="font-size:13px;margin-top:6px;color:#9ca3af;">支持 .csv 格式，单文件不超过 10MB</p>
+                <input ref="fileInput" type="file" accept=".csv" style="display:none;" @change="onFileSelect">
+              </div>
+              <div v-if="importing" style="margin-top:16px;color:#3b82f6;">正在导入，请稍候...</div>
+              <div v-if="importResult" style="margin-top:16px;">
+                <h4 style="margin-bottom:8px;">导入结果</h4>
+                <table class="data-table">
+                  <tr><td>总行数</td><td>{{ importResult.total }}</td></tr>
+                  <tr><td>新增经销商</td><td>{{ importResult.dealersCreated }}</td></tr>
+                  <tr><td>更新经销商</td><td>{{ importResult.dealersUpdated }}</td></tr>
+                  <tr><td>新增授权</td><td>{{ importResult.authCreated }}</td></tr>
+                  <tr><td>更新授权</td><td>{{ importResult.authUpdated }}</td></tr>
+                </table>
+                <div v-if="importResult.errors.length" style="margin-top:12px;">
+                  <h4 style="color:#dc2626;margin-bottom:6px;">错误明细（{{ importResult.errors.length }} 条）</h4>
+                  <table class="data-table">
+                    <thead><tr><th>行号</th><th>错误信息</th></tr></thead>
+                    <tbody>
+                      <tr v-for="(e,i) in importResult.errors" :key="i"><td>{{ e.line }}</td><td style="color:#dc2626;">{{ e.message }}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 查询日志 -->
+          <div v-if="tab==='logs'">
+            <div class="panel">
+              <div class="toolbar">
+                <input v-model="logQuery.keyword" placeholder="搜索名称/门店编号" style="width:240px;" @keyup.enter="loadLogs(1)">
+                <select v-model="logQuery.hit" @change="loadLogs(1)">
+                  <option value="">全部结果</option>
+                  <option value="true">命中</option>
+                  <option value="false">未命中</option>
+                </select>
+                <button class="btn-sm btn-add" @click="loadLogs(1)">搜索</button>
+              </div>
+              <table class="data-table">
+                <thead><tr><th>查询时间</th><th>经销商名称</th><th>门店编号</th><th>结果</th><th>IP</th></tr></thead>
+                <tbody>
+                  <tr v-for="l in logs" :key="l.id">
+                    <td>{{ formatDate(l.createdAt) }}</td>
+                    <td>{{ l.queryName }}</td>
+                    <td>{{ l.queryStoreNo }}</td>
+                    <td><span class="badge" :class="l.hit ? 'badge-active' : 'badge-expired'">{{ l.hit ? '命中' : '未命中' }}</span></td>
+                    <td>{{ l.ip }}</td>
+                  </tr>
+                  <tr v-if="!logs.length"><td colspan="5" style="text-align:center;color:#9ca3af;padding:30px;">暂无日志</td></tr>
+                </tbody>
+              </table>
+              <div class="pagination">
+                <span style="font-size:13px;color:#6b7280;">共 {{ logTotal }} 条</span>
+                <button :disabled="logPage<=1" @click="loadLogs(logPage-1)">上一页</button>
+                <button class="active">{{ logPage }}</button>
+                <button :disabled="logPage*logQuery.pageSize>=logTotal" @click="loadLogs(logPage+1)">下一页</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 管理员管理 -->
+          <div v-if="tab==='admins' && isSuperAdmin">
+            <div class="panel">
+              <div class="toolbar">
+                <button class="btn-sm btn-add" @click="openAdminModal()">+ 新增管理员</button>
+              </div>
+              <table class="data-table">
+                <thead><tr><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr v-for="a in admins" :key="a.id">
+                    <td><strong>{{ a.username }}</strong></td>
+                    <td>{{ a.email || '-' }}</td>
+                    <td>{{ a.role === 'super_admin' ? '超级管理员' : '管理员' }}</td>
+                    <td><span class="badge" :class="a.status==='active' ? 'badge-active' : 'badge-expired'">{{ a.status==='active' ? '正常' : '已禁用' }}</span></td>
+                    <td>{{ formatDate(a.lastLoginAt) }}</td>
+                    <td style="white-space:nowrap;">
+                      <button class="btn-sm btn-edit" @click="openAdminModal(a)">编辑</button>
+                      <button class="btn-sm btn-del" @click="deleteAdmin(a)" style="margin-left:4px;" :disabled="a.id===admin.id">删除</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 邮件设置 -->
+          <div v-if="tab==='mail'">
+            <div class="panel">
+              <div class="panel-title">邮件服务状态</div>
+              <table class="data-table">
+                <tr><td style="width:160px;">SMTP 配置状态</td><td><span class="badge" :class="mailStatus.configured ? 'badge-active' : 'badge-expired'">{{ mailStatus.configured ? '已配置' : '未配置' }}</span></td></tr>
+                <tr><td>SMTP 服务器</td><td>{{ mailStatus.smtpHost || '-' }}</td></tr>
+                <tr><td>SMTP 用户</td><td>{{ mailStatus.smtpUser || '-' }}</td></tr>
+                <tr><td>发件人</td><td>{{ mailStatus.smtpFrom || '-' }}</td></tr>
+              </table>
+              <p style="color:#6b7280;font-size:13px;margin-top:12px;">邮件参数通过环境变量配置，详见部署文档。配置后可向经销商发送资质确认邮件。</p>
+            </div>
+            <div class="panel">
+              <div class="panel-title">发送测试邮件</div>
+              <div class="toolbar">
+                <input v-model="testEmail" placeholder="输入收件邮箱地址" style="width:280px;">
+                <button class="btn-sm btn-add" @click="sendTestEmail" :disabled="mailSending">{{ mailSending ? '发送中...' : '发送测试邮件' }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 经销商编辑弹窗 -->
+    <div class="modal-mask" :class="{show: dealerModal.show}">
+      <div class="modal">
+        <h3>{{ dealerModal.form.id ? '编辑经销商' : '新增经销商' }}</h3>
+        <div class="field"><label>经销商名称 *</label><input v-model="dealerModal.form.name"></div>
+        <div class="field"><label>门店编号 *</label><input v-model="dealerModal.form.storeNo"></div>
+        <div class="field"><label>所在区域</label><input v-model="dealerModal.form.region"></div>
+        <div class="field"><label>上级代理</label><input v-model="dealerModal.form.parentAgent"></div>
+        <div class="field"><label>联系人</label><input v-model="dealerModal.form.contactPerson"></div>
+        <div class="field"><label>联系电话</label><input v-model="dealerModal.form.contactPhone"></div>
+        <div class="field"><label>联系邮箱（接收资质邮件）</label><input v-model="dealerModal.form.contactEmail"></div>
+        <div class="field"><label>开通时间</label><input type="datetime-local" v-model="dealerModal.form.activatedAt"></div>
+        <div class="field"><label>状态</label>
+          <select v-model="dealerModal.form.status">
+            <option value="active">正常</option><option value="suspended">暂停</option><option value="closed">已关闭</option>
+          </select>
+        </div>
+        <div class="field"><label>备注</label><textarea v-model="dealerModal.form.remark" rows="2"></textarea></div>
+
+        <!-- 授权资质 -->
+        <div v-if="dealerModal.form.id" style="margin-top:16px;border-top:1px solid #e5e7eb;padding-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h4 style="font-size:15px;">授权品牌资质</h4>
+            <button class="btn-sm btn-add" @click="addAuthRow">+ 添加品牌</button>
+          </div>
+          <table class="data-table" v-if="dealerModal.auths.length">
+            <thead><tr><th>品牌</th><th>授权区域</th><th>有效期开始</th><th>有效期结束</th><th>状态</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="(a,idx) in dealerModal.auths" :key="a.id || idx">
+                <td><input v-model="a.brand" style="width:100px;"></td>
+                <td><input v-model="a.authorizedRegion" style="width:120px;"></td>
+                <td><input type="date" v-model="a.validFrom" style="width:130px;"></td>
+                <td><input type="date" v-model="a.validTo" style="width:130px;"></td>
+                <td>
+                  <select v-model="a.status" style="width:80px;">
+                    <option value="active">有效</option><option value="expired">过期</option><option value="revoked">撤销</option>
+                  </select>
+                </td>
+                <td><button class="btn-sm btn-del" @click="removeAuthRow(idx)">删除</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else style="color:#9ca3af;font-size:13px;">暂无授权，点击"添加品牌"新增</p>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-cancel" @click="dealerModal.show=false">取消</button>
+          <button class="btn btn-primary" @click="saveDealer">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理员编辑弹窗 -->
+    <div class="modal-mask" :class="{show: adminModal.show}">
+      <div class="modal">
+        <h3>{{ adminModal.form.id ? '编辑管理员' : '新增管理员' }}</h3>
+        <div class="field"><label>用户名 *</label><input v-model="adminModal.form.username" :disabled="!!adminModal.form.id"></div>
+        <div class="field"><label>密码 {{ adminModal.form.id ? '（留空则不修改）' : '*' }}</label><input type="password" v-model="adminModal.form.password"></div>
+        <div class="field"><label>邮箱</label><input v-model="adminModal.form.email"></div>
+        <div class="field"><label>角色</label>
+          <select v-model="adminModal.form.role">
+            <option value="admin">管理员</option>
+            <option value="super_admin">超级管理员</option>
+          </select>
+        </div>
+        <div class="field"><label>状态</label>
+          <select v-model="adminModal.form.status">
+            <option value="active">正常</option><option value="disabled">禁用</option>
+          </select>
+        </div>
+        <div class="field"><label>备注</label><textarea v-model="adminModal.form.remark" rows="2"></textarea></div>
+        <div class="actions">
+          <button class="btn btn-cancel" @click="adminModal.show=false">取消</button>
+          <button class="btn btn-primary" @click="saveAdmin">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 修改密码弹窗 -->
+    <div class="modal-mask" :class="{show: showPasswordModal}">
+      <div class="modal" style="max-width:420px;">
+        <h3>修改密码</h3>
+        <div class="field"><label>原密码</label><input type="password" v-model="pwdForm.oldPassword"></div>
+        <div class="field"><label>新密码（至少 6 位）</label><input type="password" v-model="pwdForm.newPassword"></div>
+        <div class="actions">
+          <button class="btn btn-cancel" @click="showPasswordModal=false">取消</button>
+          <button class="btn btn-primary" @click="changePassword">确认修改</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" :class="toast.type" :class="{show: toast.show}">{{ toast.message }}</div>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const token = localStorage.getItem('token');
+        const admin = reactive(JSON.parse(localStorage.getItem('admin') || '{}'));
+        const isSuperAdmin = computed(() => admin.role === 'super_admin');
+        const tab = ref('dashboard');
+        const tabTitle = computed(() => ({
+          dashboard: '数据概览', dealers: '经销商管理', import: 'CSV 批量导入',
+          logs: '查询日志', admins: '管理员管理', mail: '邮件设置'
+        }[tab.value]));
+
+        const toast = reactive({ show: false, message: '', type: 'success' });
+        let toastTimer;
+        const showToast = (message, type = 'success') => {
+          toast.message = message; toast.type = type; toast.show = true;
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.show = false, 3000);
+        };
+
+        const authHeader = () => ({ Authorization: 'Bearer ' + token });
+        const api = async (url, options = {}) => {
+          const resp = await fetch(url, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...authHeader(), ...(options.headers || {}) }
+          });
+          const data = await resp.json();
+          if (resp.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            throw new Error(data.message || '登录已过期');
+          }
+          return data;
+        };
+
+        // 数据概览
+        const stats = ref({});
+        const loadStats = async () => {
+          try {
+            const data = await api('/api/admin/stats/overview');
+            if (data.success) stats.value = data.data;
+          } catch (e) { /* ignore */ }
+        };
+        const barHeight = (v) => Math.max(4, Math.min(160, v * 8));
+
+        // 经销商
+        const dealers = ref([]);
+        const dealerTotal = ref(0);
+        const dealerPage = ref(1);
+        const dealerQuery = reactive({ keyword: '', status: '', pageSize: 10 });
+        const loadDealers = async (page = 1) => {
+          dealerPage.value = page;
+          const params = new URLSearchParams({
+            page: page, pageSize: dealerQuery.pageSize,
+            keyword: dealerQuery.keyword, status: dealerQuery.status
+          });
+          const data = await api('/api/admin/dealers?' + params);
+          if (data.success) {
+            dealers.value = data.data.list;
+            dealerTotal.value = data.data.total;
+          }
+        };
+
+        const dealerModal = reactive({
+          show: false,
+          form: {},
+          auths: []
+        });
+        const openDealerModal = async (d) => {
+          dealerModal.form = d ? { ...d } : { status: 'active' };
+          dealerModal.auths = [];
+          if (d) {
+            const data = await api('/api/admin/dealers/' + d.id);
+            if (data.success) {
+              dealerModal.form = { ...data.data };
+              dealerModal.auths = (data.data.authorizations || []).map(a => ({ ...a }));
+            }
+          }
+          // 转换时间格式为 datetime-local
+          if (dealerModal.form.activatedAt) {
+            const dt = new Date(dealerModal.form.activatedAt);
+            dealerModal.form.activatedAt = dt.toISOString().slice(0, 16);
+          }
+          dealerModal.show = true;
+        };
+        const addAuthRow = () => {
+          dealerModal.auths.push({ brand: '', authorizedRegion: '', validFrom: '', validTo: '', status: 'active' });
+        };
+        const removeAuthRow = (idx) => dealerModal.auths.splice(idx, 1);
+        const saveDealer = async () => {
+          try {
+            const payload = { ...dealerModal.form };
+            if (payload.activatedAt) payload.activatedAt = new Date(payload.activatedAt).toISOString();
+            let dealerId = payload.id;
+            if (dealerId) {
+              const data = await api('/api/admin/dealers/' + dealerId, { method: 'PUT', body: JSON.stringify(payload) });
+              if (!data.success) return showToast(data.message, 'error');
+            } else {
+              const data = await api('/api/admin/dealers', { method: 'POST', body: JSON.stringify(payload) });
+              if (!data.success) return showToast(data.message, 'error');
+              dealerId = data.data.id;
+            }
+            // 保存授权
+            for (const a of dealerModal.auths) {
+              if (!a.brand) continue;
+              if (a.id) {
+                await api('/api/admin/authorizations/' + a.id, { method: 'PUT', body: JSON.stringify(a) });
+              } else {
+                await api('/api/admin/authorizations', { method: 'POST', body: JSON.stringify({ ...a, dealerId }) });
+              }
+            }
+            showToast('保存成功');
+            dealerModal.show = false;
+            loadDealers(dealerPage.value);
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        };
+        const deleteDealer = async (d) => {
+          if (!confirm(`确定删除经销商「${d.name}」吗？其名下所有授权将一并删除。`)) return;
+          const data = await api('/api/admin/dealers/' + d.id, { method: 'DELETE' });
+          showToast(data.message, data.success ? 'success' : 'error');
+          if (data.success) loadDealers(dealerPage.value);
+        };
+        const sendMail = async (d) => {
+          const data = await api('/api/admin/mail/send-qualification/' + d.id, { method: 'POST' });
+          showToast(data.message, data.success ? 'success' : 'error');
+        };
+
+        // CSV 导入
+        const importMode = ref('upsert');
+        const importing = ref(false);
+        const importResult = ref(null);
+        const onFileSelect = async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          await uploadFile(file);
+          e.target.value = '';
+        };
+        const onDrop = async (e) => {
+          const file = e.dataTransfer.files[0];
+          if (file) await uploadFile(file);
+        };
+        const uploadFile = async (file) => {
+          importing.value = true;
+          importResult.value = null;
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const resp = await fetch('/api/admin/import/csv?mode=' + importMode.value, {
+              method: 'POST',
+              headers: authHeader(),
+              body: formData
+            });
+            const data = await resp.json();
+            if (data.success) {
+              importResult.value = data.data;
+              showToast('导入完成');
+            } else {
+              showToast(data.message, 'error');
+            }
+          } catch (e) {
+            showToast('上传失败：' + e.message, 'error');
+          } finally {
+            importing.value = false;
+          }
+        };
+
+        // 查询日志
+        const logs = ref([]);
+        const logTotal = ref(0);
+        const logPage = ref(1);
+        const logQuery = reactive({ keyword: '', hit: '', pageSize: 20 });
+        const loadLogs = async (page = 1) => {
+          logPage.value = page;
+          const params = new URLSearchParams({
+            page: page, pageSize: logQuery.pageSize,
+            keyword: logQuery.keyword, hit: logQuery.hit
+          });
+          const data = await api('/api/admin/logs?' + params);
+          if (data.success) {
+            logs.value = data.data.list;
+            logTotal.value = data.data.total;
+          }
+        };
+
+        // 管理员
+        const admins = ref([]);
+        const adminModal = reactive({ show: false, form: {} });
+        const loadAdmins = async () => {
+          const data = await api('/api/admin/admins');
+          if (data.success) admins.value = data.data;
+        };
+        const openAdminModal = (a) => {
+          adminModal.form = a ? { ...a, password: '' } : { role: 'admin', status: 'active' };
+          adminModal.show = true;
+        };
+        const saveAdmin = async () => {
+          const payload = { ...adminModal.form };
+          if (payload.id) {
+            const data = await api('/api/admin/admins/' + payload.id, { method: 'PUT', body: JSON.stringify(payload) });
+            showToast(data.message, data.success ? 'success' : 'error');
+          } else {
+            const data = await api('/api/admin/admins', { method: 'POST', body: JSON.stringify(payload) });
+            showToast(data.message, data.success ? 'success' : 'error');
+          }
+          adminModal.show = false;
+          loadAdmins();
+        };
+        const deleteAdmin = async (a) => {
+          if (!confirm(`确定删除管理员「${a.username}」吗？`)) return;
+          const data = await api('/api/admin/admins/' + a.id, { method: 'DELETE' });
+          showToast(data.message, data.success ? 'success' : 'error');
+          if (data.success) loadAdmins();
+        };
+
+        // 邮件
+        const mailStatus = reactive({});
+        const testEmail = ref('');
+        const mailSending = ref(false);
+        const loadMailStatus = async () => {
+          const data = await api('/api/admin/mail/status');
+          if (data.success) Object.assign(mailStatus, data.data);
+        };
+        const sendTestEmail = async () => {
+          if (!testEmail.value) return showToast('请输入收件邮箱', 'error');
+          mailSending.value = true;
+          try {
+            const data = await api('/api/admin/mail/test', { method: 'POST', body: JSON.stringify({ to: testEmail.value }) });
+            showToast(data.message, data.success ? 'success' : 'error');
+          } finally {
+            mailSending.value = false;
+          }
+        };
+
+        // 修改密码
+        const showPasswordModal = ref(false);
+        const pwdForm = reactive({ oldPassword: '', newPassword: '' });
+        const changePassword = async () => {
+          const data = await api('/api/auth/change-password', { method: 'POST', body: JSON.stringify(pwdForm) });
+          showToast(data.message, data.success ? 'success' : 'error');
+          if (data.success) {
+            showPasswordModal.value = false;
+            pwdForm.oldPassword = '';
+            pwdForm.newPassword = '';
+          }
+        };
+
+        const switchTab = (t) => {
+          tab.value = t;
+          if (t === 'dashboard') loadStats();
+          if (t === 'dealers') loadDealers(1);
+          if (t === 'logs') loadLogs(1);
+          if (t === 'admins') loadAdmins();
+          if (t === 'mail') loadMailStatus();
+        };
+
+        const logout = () => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('admin');
+          window.location.href = '/login';
+        };
+
+        const formatDate = (d) => {
+          if (!d) return '-';
+          const dt = new Date(d);
+          return dt.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        };
+        const dealerStatusText = (s) => ({ active: '正常', suspended: '暂停', closed: '已关闭' }[s] || s);
+
+        onMounted(() => {
+          if (!token) { window.location.href = '/login'; return; }
+          loadStats();
+        });
+
+        return {
+          admin, isSuperAdmin, tab, tabTitle, switchTab,
+          stats, barHeight,
+          dealers, dealerTotal, dealerPage, dealerQuery, loadDealers,
+          dealerModal, openDealerModal, addAuthRow, removeAuthRow, saveDealer, deleteDealer, sendMail,
+          importMode, importing, importResult, onFileSelect, onDrop,
+          logs, logTotal, logPage, logQuery, loadLogs,
+          admins, adminModal, openAdminModal, saveAdmin, deleteAdmin,
+          mailStatus, testEmail, mailSending, loadMailStatus, sendTestEmail,
+          showPasswordModal, pwdForm, changePassword,
+          toast, logout, formatDate, dealerStatusText
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

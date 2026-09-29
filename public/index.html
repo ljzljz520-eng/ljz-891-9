@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>品牌经销资质查询系统</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app">
+    <nav class="navbar">
+      <div class="container">
+        <div class="brand">品牌经销资质查询系统 <span>Dealer Qualification Query</span></div>
+        <a href="/login">管理后台</a>
+      </div>
+    </nav>
+
+    <section class="query-hero">
+      <div class="container">
+        <h1>经销商品牌资质查询</h1>
+        <p>输入经销商名称与门店编号，即可查询授权品牌、区域、有效期及上级代理信息</p>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="query-card">
+        <form class="query-form" @submit.prevent="doQuery">
+          <div class="field">
+            <label>经销商名称</label>
+            <input v-model="form.name" type="text" placeholder="请输入经销商全称" required>
+          </div>
+          <div class="field">
+            <label>门店编号</label>
+            <input v-model="form.storeNo" type="text" placeholder="请输入门店编号" required>
+          </div>
+          <div class="field" style="flex:0;align-self:flex-end;">
+            <button type="submit" class="btn btn-primary" :disabled="loading">
+              {{ loading ? '查询中...' : '立即查询' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div v-if="searched">
+        <div v-if="result" class="result-card">
+          <div class="result-header">
+            <h2>{{ result.dealer.name }}</h2>
+            <span class="badge" :class="'badge-' + result.dealer.status">{{ statusText(result.dealer.status) }}</span>
+          </div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">门店编号</div>
+              <div class="value">{{ result.dealer.storeNo }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">所在区域</div>
+              <div class="value">{{ result.dealer.region || '-' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">上级代理</div>
+              <div class="value">{{ result.dealer.parentAgent || '-' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">开通时间</div>
+              <div class="value">{{ formatDate(result.dealer.activatedAt) }}</div>
+            </div>
+          </div>
+
+          <h3 style="margin-bottom:12px;font-size:16px;">授权品牌资质（共 {{ result.authorizations.length }} 项）</h3>
+          <table class="auth-table" v-if="result.authorizations.length">
+            <thead>
+              <tr>
+                <th>授权品牌</th>
+                <th>授权区域</th>
+                <th>有效期</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="a in result.authorizations" :key="a.id">
+                <td><strong>{{ a.brand }}</strong></td>
+                <td>{{ a.authorizedRegion || '-' }}</td>
+                <td>{{ a.validFrom || '-' }} 至 {{ a.validTo || '-' }}</td>
+                <td><span class="badge" :class="'badge-' + a.status">{{ authStatusText(a.status) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty-state">
+            <div class="icon">📋</div>
+            <p>暂无授权品牌记录</p>
+          </div>
+        </div>
+
+        <div v-else class="result-card">
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <p>{{ errorMsg || '未找到匹配的经销商资质信息' }}</p>
+            <p style="font-size:13px;margin-top:8px;color:#9ca3af;">请核对经销商名称与门店编号后重新查询</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer style="text-align:center;padding:30px 0;color:#9ca3af;font-size:13px;">
+      © 2026 品牌经销资质查询系统 · 仅供授权查询使用
+    </footer>
+  </div>
+
+  <script>
+    const { createApp, ref } = Vue;
+    createApp({
+      setup() {
+        const form = ref({ name: '', storeNo: '' });
+        const loading = ref(false);
+        const searched = ref(false);
+        const result = ref(null);
+        const errorMsg = ref('');
+
+        const doQuery = async () => {
+          loading.value = true;
+          searched.value = false;
+          result.value = null;
+          errorMsg.value = '';
+          try {
+            const resp = await fetch('/api/query', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: form.value.name.trim(), storeNo: form.value.storeNo.trim() })
+            });
+            const data = await resp.json();
+            if (data.success) {
+              result.value = data.data;
+            } else {
+              errorMsg.value = data.message || '查询失败';
+            }
+          } catch (e) {
+            errorMsg.value = '网络错误，请稍后重试';
+          } finally {
+            loading.value = false;
+            searched.value = true;
+          }
+        };
+
+        const statusText = (s) => ({ active: '正常', suspended: '暂停', closed: '已关闭' }[s] || s);
+        const authStatusText = (s) => ({ active: '有效', expired: '已过期', revoked: '已撤销' }[s] || s);
+        const formatDate = (d) => {
+          if (!d) return '-';
+          const dt = new Date(d);
+          return dt.toLocaleDateString('zh-CN') + ' ' + dt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        return { form, loading, searched, result, errorMsg, doQuery, statusText, authStatusText, formatDate };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
