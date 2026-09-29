@@ -1,0 +1,26 @@
+{
+  "name": "dealer-qualification-system",
+  "version": "1.0.0",
+  "description": "品牌经销资质查询系统：客户端资质查询 + 多管理员后台维护 + CSV 导入",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "init-db": "node src/scripts/init-db.js",
+    "test": "node test/smoke.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0",
+    "mysql2": "^3.11.0",
+    "nodemailer": "^6.9.14"
+  }
+}

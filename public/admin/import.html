@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV 导入 - 资质管理后台</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="admin-shell" id="adminShell"></div>
+
+<template id="pageContent">
+  <div class="page-title"><h1>CSV 批量导入</h1></div>
+
+  <div class="panel">
+    <h3 style="margin-top:0">① 准备文件</h3>
+    <p class="muted">
+      CSV 需为 UTF-8 编码，首行表头，必需列：<b>经销商名称、门店编号、授权品牌、授权区域、有效期开始、有效期截止</b>；
+      可选列：上级代理、开通时间、状态（有效/已撤销）。日期格式 <code>YYYY-MM-DD</code>（也兼容 2025/1/5）。
+    </p>
+    <p>
+      <a class="btn btn-ghost btn-sm" href="#" id="tplLink">⬇️ 下载 CSV 模板（含示例数据）</a>
+    </p>
+    <div class="alert alert-info">
+      唯一键 = <b>门店编号 + 授权品牌</b>。数据库中已存在的组合将按 CSV 内容更新；文件内重复或格式错误会整体拒绝、不写入任何数据。
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-top:0">② 上传导入</h3>
+    <form id="uploadForm">
+      <div class="form-row">
+        <input type="file" id="csvFile" accept=".csv,text/csv" required>
+        <p class="muted" id="sizeHint"></p>
+      </div>
+      <div class="form-row">
+        <label><input type="checkbox" id="dryRun"> 仅校验不写入（试运行）</label>
+      </div>
+      <button class="btn" type="submit" id="uploadBtn">📤 开始导入</button>
+    </form>
+    <div id="resultBox" class="mt-4"></div>
+  </div>
+</template>
+
+<script src="/js/common.js"></script>
+<script src="admin.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tplLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const res = await fetch('/api/qualifications/template.csv', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('admin_token') },
+    });
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'qualification_template.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('csvFile').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    document.getElementById('sizeHint').textContent = f ? `已选择：${f.name}（${(f.size / 1024).toFixed(1)} KB）` : '';
+  });
+
+  document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = document.getElementById('csvFile').files[0];
+    if (!file) return toast('请选择 CSV 文件');
+    const dryRun = document.getElementById('dryRun').checked;
+    const box = document.getElementById('resultBox');
+    const btn = document.getElementById('uploadBtn');
+    box.innerHTML = '<div class="alert alert-info">正在上传并校验，请稍候…</div>';
+    btn.disabled = true;
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const resp = await API.request('POST', '/api/qualifications/import' + (dryRun ? '?dry_run=1' : ''), fd);
+      const d = resp.data || {};
+      box.innerHTML = `<div class="alert alert-success">${escapeHtml(resp.message)}</div>
+        <p class="muted">总计 ${d.total ?? 0} 条｜新增 ${d.inserted ?? 0}｜更新 ${d.updated ?? 0}｜无变化 ${d.unchanged ?? 0}${dryRun ? '（试运行，未写库）' : ''}</p>`;
+    } catch (err) {
+      let html = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      const errors = err.data && err.data.errors;
+      if (errors && errors.length) {
+        html += '<div class="table-wrap mt-2"><table class="data"><thead><tr><th>行号</th><th>问题</th></tr></thead><tbody>' +
+          errors.map((x) => `<tr><td>第 ${x.line} 行</td><td>${escapeHtml(x.message)}</td></tr>`).join('') +
+          '</tbody></table></div>';
+      }
+      box.innerHTML = html;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+});
+</script>
+</body>
+</html>

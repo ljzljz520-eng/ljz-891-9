@@ -1,0 +1,21 @@
+# systemd 服务示例：
+#   sudo cp deploy/dealer-qualification.service.example /etc/systemd/system/dealer-qualification.service
+#   修改其中的路径与用户后：
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dealer-qualification
+#   journalctl -u dealer-qualification -f   # 查看日志
+[Unit]
+Description=Dealer Qualification Query System
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=nodejs
+WorkingDirectory=/opt/dealer-qualification
+EnvironmentFile=/opt/dealer-qualification/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

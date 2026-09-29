@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员账号 - 资质管理后台</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="admin-shell" id="adminShell"></div>
+
+<template id="pageContent">
+  <div class="page-title">
+    <h1>管理员账号</h1>
+    <button class="btn" id="addBtn">＋ 新建管理员</button>
+  </div>
+
+  <div class="panel">
+    <div class="alert alert-info" id="roleTip">
+      <b>角色说明：</b>「超级管理员」可管理账号与全部资质；「管理员」只能维护资质。支持多名管理员同时使用。
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>ID</th><th>用户名</th><th>姓名</th><th>邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <header id="modalTitle">新建管理员</header>
+    <div class="body">
+      <input type="hidden" id="f_id">
+      <div class="form-grid">
+        <div class="form-row">
+          <label>用户名 * <span class="hint">3-64 位字母数字 _ . -</span></label>
+          <input type="text" id="f_username">
+        </div>
+        <div class="form-row">
+          <label>姓名/昵称 *</label>
+          <input type="text" id="f_display_name">
+        </div>
+        <div class="form-row full">
+          <label>邮箱 <span class="hint">用于找回密码，建议填写</span></label>
+          <input type="email" id="f_email">
+        </div>
+        <div class="form-row">
+          <label>角色 *</label>
+          <select id="f_role">
+            <option value="admin">管理员（维护资质）</option>
+            <option value="super_admin">超级管理员（可管账号）</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>状态</label>
+          <select id="f_is_active">
+            <option value="1">启用</option>
+            <option value="0">停用</option>
+          </select>
+        </div>
+        <div class="form-row full" id="pwdRow">
+          <label id="pwdLabel">初始密码 * <span class="hint">8-64 位</span></label>
+          <input type="password" id="f_password" placeholder="新建时必填；编辑时留空表示不修改">
+        </div>
+      </div>
+    </div>
+    <footer>
+      <button class="btn btn-ghost" id="cancelBtn">取消</button>
+      <button class="btn" id="saveBtn">保存</button>
+    </footer>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="admin.js"></script>
+<script src="admins.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资质管理 - 资质管理后台</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="admin-shell" id="adminShell"></div>
+
+<template id="pageContent">
+  <div class="page-title">
+    <h1>资质管理</h1>
+    <button class="btn" id="addBtn">＋ 新增资质</button>
+  </div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <input type="text" id="keyword" placeholder="搜索经销商/门店/品牌/区域/上级代理">
+      <select id="stateFilter">
+        <option value="">全部状态</option>
+        <option value="valid">有效</option>
+        <option value="pending">未生效</option>
+        <option value="expired">已过期</option>
+        <option value="revoked">已撤销</option>
+      </select>
+      <button class="btn btn-sm" id="searchBtn">查询</button>
+      <button class="btn btn-sm btn-ghost" id="resetBtn">重置</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>经销商</th><th>门店编号</th><th>品牌</th><th>区域</th>
+            <th>上级代理</th><th>有效期</th><th>开通时间</th><th>状态</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"><tr><td colspan="9" class="center muted">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <span id="totalInfo"></span>
+      <button class="btn btn-sm btn-ghost" id="prevBtn">上一页</button>
+      <span id="pageInfo">1</span>
+      <button class="btn btn-sm btn-ghost" id="nextBtn">下一页</button>
+    </div>
+  </div>
+</template>
+
+<!-- 新增/编辑弹窗 -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <header id="modalTitle">新增资质</header>
+    <div class="body">
+      <input type="hidden" id="f_id">
+      <div class="form-grid">
+        <div class="form-row full">
+          <label>经销商名称 *</label>
+          <input type="text" id="f_dealer_name" maxlength="128">
+        </div>
+        <div class="form-row">
+          <label>门店编号 *</label>
+          <input type="text" id="f_store_code" maxlength="64">
+        </div>
+        <div class="form-row">
+          <label>授权品牌 *</label>
+          <input type="text" id="f_brand" maxlength="64">
+        </div>
+        <div class="form-row full">
+          <label>授权区域 *</label>
+          <input type="text" id="f_region" maxlength="128" placeholder="如：上海市浦东新区">
+        </div>
+        <div class="form-row full">
+          <label>上级代理</label>
+          <input type="text" id="f_parent_agent" maxlength="128" placeholder="没有可留空">
+        </div>
+        <div class="form-row">
+          <label>有效期开始 *</label>
+          <input type="date" id="f_valid_from">
+        </div>
+        <div class="form-row">
+          <label>有效期截止 *</label>
+          <input type="date" id="f_valid_until">
+        </div>
+        <div class="form-row">
+          <label>门店开通时间</label>
+          <input type="date" id="f_opened_at">
+        </div>
+        <div class="form-row">
+          <label>授权状态 *</label>
+          <select id="f_status">
+            <option value="active">有效</option>
+            <option value="revoked">已撤销</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <footer>
+      <button class="btn btn-ghost" id="cancelBtn">取消</button>
+      <button class="btn" id="saveBtn">保存</button>
+    </footer>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="admin.js"></script>
+<script src="qualifications.js"></script>
+</body>
+</html>

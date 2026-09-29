@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员登录 - 品牌经销资质系统</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap"><a class="brand" href="/"><span class="logo">🏷️</span>品牌经销资质查询平台</a></div></header>
+
+<div class="login-wrap">
+  <div class="card">
+    <div class="login-logo">🔐</div>
+    <h2 class="center" style="margin-top:0">后台管理登录</h2>
+    <div id="alertBox"></div>
+    <form id="loginForm">
+      <div class="form-row">
+        <label>用户名</label>
+        <input type="text" id="username" autocomplete="username" required>
+      </div>
+      <div class="form-row">
+        <label>密码</label>
+        <input type="password" id="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-block" type="submit" id="loginBtn">登 录</button>
+    </form>
+    <p class="center mt-4"><a href="forgot.html">忘记密码？</a> · <a href="/">返回查询首页</a></p>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const box = document.getElementById('alertBox');
+  box.innerHTML = '';
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    const resp = await API.post('/api/auth/login', {
+      username: document.getElementById('username').value.trim(),
+      password: document.getElementById('password').value,
+    });
+    localStorage.setItem('admin_token', resp.data.token);
+    localStorage.setItem('admin_user', JSON.stringify(resp.data.admin));
+    location.href = '/admin/index.html';
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+    btn.disabled = false; btn.textContent = '登 录';
+  }
+});
+</script>
+</body>
+</html>

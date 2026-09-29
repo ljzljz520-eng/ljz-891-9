@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>重置密码 - 品牌经销资质系统</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap"><a class="brand" href="/"><span class="logo">🏷️</span>品牌经销资质查询平台</a></div></header>
+
+<div class="login-wrap">
+  <div class="card">
+    <div class="login-logo">🔑</div>
+    <h2 class="center" style="margin-top:0">设置新密码</h2>
+    <div id="alertBox"></div>
+    <form id="resetForm">
+      <div class="form-row">
+        <label>新密码 <span class="hint">（8-64 位）</span></label>
+        <input type="password" id="password" minlength="8" required>
+      </div>
+      <div class="form-row">
+        <label>确认新密码</label>
+        <input type="password" id="password2" minlength="8" required>
+      </div>
+      <button class="btn btn-block" type="submit" id="submitBtn">重置密码</button>
+    </form>
+    <p class="center mt-4"><a href="login.html">返回登录</a></p>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+const token = new URLSearchParams(location.search).get('token') || '';
+document.getElementById('resetForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const box = document.getElementById('alertBox');
+  box.innerHTML = '';
+  const p1 = document.getElementById('password').value;
+  const p2 = document.getElementById('password2').value;
+  if (p1 !== p2) { box.innerHTML = '<div class="alert alert-error">两次输入的密码不一致</div>'; return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '提交中…';
+  try {
+    const resp = await API.post('/api/auth/reset-password', { token, password: p1 });
+    box.innerHTML = `<div class="alert alert-success">${escapeHtml(resp.message)}，<a href="login.html">去登录</a></div>`;
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '重置密码';
+  }
+});
+</script>
+</body>
+</html>

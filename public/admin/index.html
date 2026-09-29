@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>概览 - 资质管理后台</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="admin-shell" id="adminShell"></div>
+
+<template id="pageContent">
+  <div class="page-title"><h1>数据概览</h1><span class="muted" id="today"></span></div>
+  <div id="stats" class="stat-grid"></div>
+
+  <div class="panel">
+    <h3 style="margin-top:0">快捷操作</h3>
+    <div class="toolbar">
+      <a class="btn" href="qualifications.html">📇 资质列表 / 新增资质</a>
+      <a class="btn btn-ghost" href="import.html">📥 CSV 批量导入</a>
+      <a class="btn btn-ghost" href="/api/qualifications/template.csv" id="tplLink">⬇️ 下载 CSV 模板</a>
+    </div>
+    <p class="muted">提示：CSV 以「门店编号 + 授权品牌」为唯一键，重复导入会自动更新已有记录。</p>
+  </div>
+</template>
+
+<script src="/js/common.js"></script>
+<script src="admin.js"></script>
+<script>
+// 模板下载需要带鉴权头：改用 blob 方式
+document.getElementById('tplLink')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const res = await fetch('/api/qualifications/template.csv', {
+    headers: { Authorization: 'Bearer ' + localStorage.getItem('admin_token') },
+  });
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qualification_template.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('today').textContent = new Date().toLocaleDateString('zh-CN');
+
+(async function load() {
+  try {
+    const { data: s } = await API.get('/api/qualifications/stats/summary');
+    const cards = [
+      { n: s.qualifications, l: '授权记录总数', c: '' },
+      { n: s.stores, l: '授权门店数', c: 'ok' },
+      { n: s.brands, l: '授权品牌数', c: '' },
+      { n: s.valid, l: '当前有效', c: 'ok' },
+      { n: s.expiring, l: '30 天内到期', c: 'warn' },
+      { n: s.expired, l: '已过期', c: 'danger' },
+      { n: s.revoked, l: '已撤销', c: '' },
+      { n: s.today_queries, l: '今日客户查询次数', c: '' },
+    ];
+    document.getElementById('stats').innerHTML = cards.map((x) => `
+      <div class="stat-card ${x.c}">
+        <div class="num">${x.n}</div>
+        <div class="lbl">${x.l}</div>
+      </div>`).join('');
+  } catch (err) { toast(err.message); }
+})();
+</script>
+</body>
+</html>
